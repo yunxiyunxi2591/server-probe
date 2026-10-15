@@ -1,0 +1,12 @@
+FROM python:3.12-slim
+
+# 装 iputils-ping 才能用 ICMP 精确测三网延迟；
+# 若不想装，也可以在运行时不加这段并设 PROBE_PING_MODE=tcp（用 TCP 握手近似）
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends iputils-ping \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY agent.py /app/agent.py
+
+CMD ["python", "-u", "/app/agent.py"]

@@ -1,0 +1,26 @@
+# 无趣的探针 - 只跑采集端（用于 NAS 等不需要开面板的机器）
+#
+# 【镜像说明】probe-agent 是本地构建的镜像名，网上没有这个镜像。
+# NAS 上没有源码时，用下面的方式从 VPS 把镜像搬过来；有源码就直接 build。
+#   本目录有源码:  docker build -t probe-agent -f Dockerfile.agent .
+#   从 VPS 导出:   VPS 上 docker save probe-agent:latest | gzip > p.tgz
+#                  NAS 上 gunzip -c p.tgz | docker load
+# 然后: docker compose -f docker-compose.nas.yml up -d
+
+services:
+  probe-agent:
+    image: probe-agent:latest     # 本地自己构建的镜像，非 Docker Hub 下载
+    container_name: probe-agent
+    restart: unless-stopped
+    network_mode: host            # 必须：读宿主机真实网卡流量
+    pid: host
+    volumes:
+      - /:/host:ro                # 只读挂载，用于统计硬盘；想只统计数据盘就改成 /vol1:/host:ro
+    environment:
+      PROBE_SERVER: "http://VPS公网IP:25777"   # ← 改成你 VPS 地址
+      PROBE_TOKEN: "change-me-2026"            # ← 与服务端一致
+      PROBE_NAME: "fnOS NAS"
+      PROBE_FLAG: "🇨🇳"
+      PROBE_PRICE: "-"
+      PROBE_DISK: "/host"
+      PROBE_INTERVAL: "15"

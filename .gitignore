@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+*.pyo
+*.tgz
+*.zip
+token.txt
+.DS_Store
+.venv/
+venv/

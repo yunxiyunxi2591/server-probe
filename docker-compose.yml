@@ -1,0 +1,50 @@
+# 无趣的探针 - Docker Compose
+# 用法:
+#   1) 改下面所有 PROBE_TOKEN 为同一个随机字符串
+#   2) docker compose up -d --build
+#   3) 浏览器打开 http://服务器IP:25777/
+#
+# 本文件同时起了「服务端 + 本机 agent」。
+# 如果这台机器只跑面板不带自己，删掉 probe-agent 段即可。
+#
+# 【关于镜像名】probe-server / probe-agent 是我起的本地名字，网上不存在这两个镜像，
+# 不会（也拉不到）从 Docker Hub 下载。它们由下面 build: 指向的本目录 Dockerfile
+# 现场构建生成。唯一会联网下载的是基础镜像 python:3.12-slim（Docker 官方）。
+
+services:
+  # ---------- 服务端（面板），部署在美国 VPS ----------
+  probe-server:
+    build:
+      context: .                      # 用本目录的 server.py 现场构建
+      dockerfile: Dockerfile
+    image: probe-server:latest        # 构建出来的本地镜像名（自定义，非网上下载）
+    container_name: probe-server
+    restart: unless-stopped
+    ports:
+      - "25777:25777"
+    environment:
+      PROBE_TOKEN: "change-me-2026"      # ← 改成你的随机串
+      PROBE_PORT: "25777"
+      PROBE_TITLE: "无趣的探针"
+
+  # ---------- 采集端，VPS / NAS 都放这一段 ----------
+  probe-agent:
+    build:
+      context: .                      # 用本目录的 agent.py 现场构建
+      dockerfile: Dockerfile.agent
+    image: probe-agent:latest         # 本地镜像名（自定义，非网上下载）
+    container_name: probe-agent
+    restart: unless-stopped
+    # 必须用 host 网络：这样读到的是宿主机真实网卡流量，而不是容器的
+    network_mode: host
+    pid: host
+    volumes:
+      - /:/host:ro                       # 只读挂载宿主机根目录，用于统计硬盘
+    environment:
+      PROBE_SERVER: "http://127.0.0.1:25777"   # NAS 上改成 http://VPS公网IP:25777
+      PROBE_TOKEN: "change-me-2026"            # ← 与服务端一致
+      PROBE_NAME: "Netcup VPS"                 # ← 面板显示名
+      PROBE_FLAG: "🇺🇸"                         # NAS 用 🇨🇳
+      PROBE_PRICE: "€7.4/月"                    # NAS 可写 "-"
+      PROBE_DISK: "/host"                      # 配合上面的只读挂载
+      PROBE_INTERVAL: "15"

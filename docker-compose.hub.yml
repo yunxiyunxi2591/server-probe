@@ -1,0 +1,33 @@
+# 无趣的探针 - 使用 Docker Hub 上已构建好的镜像（无需本地构建）
+# 用法: docker compose -f docker-compose.hub.yml up -d
+# 也可以不改文件，直接用环境变量指定镜像归属:
+#   PROBE_OWNER=你的用户名 docker compose -f docker-compose.hub.yml up -d
+
+services:
+  probe-server:
+    image: "${PROBE_OWNER:-IMAGE_OWNER}/probe-server:latest"
+    container_name: probe-server
+    restart: unless-stopped
+    ports:
+      - "25777:25777"
+    environment:
+      PROBE_TOKEN: "change-me-2026"      # ← 改成你的随机串
+      PROBE_PORT: "25777"
+      PROBE_TITLE: "无趣的探针"
+
+  probe-agent:
+    image: "${PROBE_OWNER:-IMAGE_OWNER}/probe-agent:latest"
+    container_name: probe-agent
+    restart: unless-stopped
+    network_mode: host          # 必须：读宿主机真实网卡流量
+    pid: host
+    volumes:
+      - /:/host:ro              # 只读挂载宿主机根目录，用于统计硬盘
+    environment:
+      PROBE_SERVER: "http://127.0.0.1:25777"   # NAS 上改成 http://VPS公网IP:25777
+      PROBE_TOKEN: "change-me-2026"            # ← 与服务端一致
+      PROBE_NAME: "Netcup VPS"
+      PROBE_FLAG: "🇺🇸"
+      PROBE_PRICE: "€7.4/月"
+      PROBE_DISK: "/host"
+      PROBE_INTERVAL: "15"
