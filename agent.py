@@ -30,6 +30,7 @@ EXPIRE = _env("PROBE_EXPIRE", "")                        # 到期日 YYYY-MM-DD,
 DISK_PATH = _env("PROBE_DISK", "/")                      # 挂载点; Docker 里用 /host, 或 "all" 汇总所有挂载点
 INTERVAL = int(_env("PROBE_INTERVAL", 15))               # 上报间隔(秒)
 PING_MODE = _env("PROBE_PING_MODE", "icmp")              # icmp(默认, 自动降级) / tcp
+DEBUG_FS = _env("PROBE_DEBUG_FS", "") == "1"              # 打印磁盘扫描明细(排查容量用)
 
 # 三网 ping 目标: 每个运营商可配多个候选 IP, agent 并行测完自动选丢包最低的那个
 # 也可用环境变量 PROBE_CARRIERS="电信:1.2.3.4|5.6.7.8,联通:3.3.3.3" 覆盖
@@ -108,6 +109,70 @@ def disk_usage(path):
     return total - free, total, 1
 
 
+def _physical_disks():
+    """从 /sys/block 统计物理硬盘: 返回 (总容量字节, 块数)
+
+    跳过 loop/ram/zram/fd/sr 及 dm-/md 虚拟设备(它们是多个物理盘的组合, 会计重)。
+    容器里 /sys 是宿主机的, 所以拿到的就是宿主机的盘。
+    """
+    total, n = 0, 0
+    try:
+        for name in os.listdir("/sys/block"):
+            if name.startswith(("loop", "ram", "zram", "fd", "sr", "dm-", "md")):
+                continue
+            try:
+                with open("/sys/block/%s/size" % name) as f:
+                    sectors = int(f.read().strip())
+            except Exception:
+                continue
+            if sectors <= 0:
+                continue
+            total += sectors * 512
+            n += 1
+    except Exception:
+        pass
+    return total, n
+
+
+def _dedupe_unions(fss):
+    """剔除跨盘联合卷的成员卷, 避免容量重复累加
+
+    fnOS 这类 NAS 会把多块盘组成一个大的存储空间, 成员卷同时也能被看到;
+    联合卷的总容量 = 成员卷之和, 直接累加会翻倍。这里对每个卷做子集和匹配:
+    在其它卷中找"合计最接近该卷总容量"的一组(相对差 <=0.2%, 至少 2 个),
+    命中则剔除这组成员, 只保留联合卷(其 used 是真实数据量)。
+    取"差异最小"的组合而非第一个命中, 避免容量巧合误剔。
+    """
+    fss = [x for x in fss if x["total"] > 0]
+    changed = True
+    while changed and len(fss) > 1:
+        changed = False
+        fss.sort(key=lambda x: -x["total"])
+        for i, a in enumerate(fss):
+            rest = fss[i + 1:]
+            n = len(rest)
+            if n < 2 or n > 16:
+                continue
+            best_mask, best_diff = 0, None
+            for mask in range(1, 1 << n):
+                s, cnt = 0, 0
+                for j in range(n):
+                    if mask >> j & 1:
+                        s += rest[j]["total"]
+                        cnt += 1
+                if cnt < 2:
+                    continue
+                d = abs(s - a["total"]) / a["total"]
+                if best_diff is None or d < best_diff:
+                    best_diff, best_mask = d, mask
+            if best_mask and best_diff is not None and best_diff <= 0.002:
+                drop = {j for j in range(n) if best_mask >> j & 1}
+                fss = fss[:i + 1] + [x for j, x in enumerate(rest) if j not in drop]
+                changed = True
+                break
+    return fss
+
+
 def disk_usage_all():
     """汇总所有真实挂载点的容量（按文件系统去重），返回 (used, total, mounts)
 
@@ -140,8 +205,8 @@ def disk_usage_all():
                     cands.append(mnt)
         except Exception:
             pass
-    used = total = mounts = 0
     seen_dev = set()
+    fss = []
     for path in cands:
         try:
             st = os.statvfs(path)
@@ -154,12 +219,26 @@ def disk_usage_all():
         if dev in seen_dev:                      # 同一文件系统只计一次
             continue
         seen_dev.add(dev)
-        used += t - st.f_bavail * st.f_frsize
-        total += t
-        mounts += 1
-    if total <= 0:                               # 兑底
+        fss.append({"used": t - st.f_bavail * st.f_frsize, "total": t, "path": path})
+    if DEBUG_FS:
+        for x in fss:
+            print("[fs] %-22s total=%.2f TB used=%.2f TB" % (
+                x["path"], x["total"] / 2**40, x["used"] / 2**40))
+    if not fss:                                  # 兑底
         return disk_usage("/" if DISK_PATH == "all" else DISK_PATH)
-    return used, total, mounts
+    fss = _dedupe_unions(fss)                    # 剔除跨盘联合卷的成员, 防止重复累加
+    if DEBUG_FS:
+        for x in fss:
+            print("[fs·保留] %-22s total=%.2f TB used=%.2f TB" % (
+                x.get("path", "?"), x["total"] / 2**40, x["used"] / 2**40))
+        pt, pn = _physical_disks()
+        print("[fs·物理盘] %d 块, 合计 %.2f TB" % (pn, pt / 2**40))
+    fs_used = sum(x["used"] for x in fss)
+    fs_total = sum(x["total"] for x in fss)
+    phys_total, phys_n = _physical_disks()       # 物理盘合计(用户直觉上的"所有硬盘容量")
+    if phys_total > 0:
+        return min(fs_used, phys_total), phys_total, phys_n
+    return fs_used, fs_total, len(fss)
 
 
 def cpu_info():

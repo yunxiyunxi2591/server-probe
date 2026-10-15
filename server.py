@@ -277,9 +277,7 @@ function card(n){
   // 左列: CPU / 硬盘 / 速率 / 费用 / 延迟    右列: 内存 / 流量 / 在线 / 三网 / 丢包
   const colL=[
     mRow('CPU',cpu,cpu.toFixed(1)+'%',esc(cpuTip),cpuTip),
-    mRow('硬盘',diskPct,diskPct.toFixed(1)+'%',fmtSize(n.disk_used||0)+' / '+fmtSize(n.disk_total||0)+
-      (n.disk_mounts>1?' · '+n.disk_mounts+' 盘合计':''),
-      "硬盘"+(n.disk_mounts>1?"（"+n.disk_mounts+" 个挂载点合计）":"")),
+    mRow('硬盘',diskPct,diskPct.toFixed(1)+'%',fmtSize(n.disk_used||0)+' / '+fmtSize(n.disk_total||0),'硬盘'),
     rate,price,latCell,
   ];
   const colR=[
