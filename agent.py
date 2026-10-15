@@ -26,6 +26,7 @@ NAME = _env("PROBE_NAME", socket.gethostname())          # 面板显示名
 FLAG = _env("PROBE_FLAG", "🇺🇸")                          # 国旗 emoji: 🇺🇸 / 🇨🇳
 LOCATION = _env("PROBE_LOCATION", "")                    # 位置描述(面板暂只显示国旗)
 PRICE = _env("PROBE_PRICE", "-")                         # 月租, 如 "€7.4/月"
+EXPIRE = _env("PROBE_EXPIRE", "")                        # 到期日 YYYY-MM-DD, 面板显示剩余天数; 留空不显示
 DISK_PATH = _env("PROBE_DISK", "/")                      # 挂载点; Docker 里用 /host, 或 "all" 汇总所有挂载点
 INTERVAL = int(_env("PROBE_INTERVAL", 15))               # 上报间隔(秒)
 PING_MODE = _env("PROBE_PING_MODE", "icmp")              # icmp(默认, 自动降级) / tcp
@@ -338,6 +339,7 @@ def main():
             model, cores = cpu_info()
             payload = {
                 "name": NAME, "flag": FLAG, "location": LOCATION, "price": PRICE,
+                "expire": EXPIRE,
                 "cpu": round(cpu, 1), "load": load_avg(),
                 "cpu_model": model, "cpu_cores": cores,
                 "mem_used": mem_used, "mem_total": mem_total,

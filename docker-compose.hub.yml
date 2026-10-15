@@ -28,6 +28,7 @@ services:
       PROBE_TOKEN: "change-me-2026"            # ← 与服务端一致
       PROBE_NAME: "VPS"
       PROBE_FLAG: "🇺🇸"
-      PROBE_PRICE: "€7.4/月"
+      PROBE_PRICE: "$14.99/YR"
+      PROBE_EXPIRE: ""
       PROBE_DISK: "/host"
       PROBE_INTERVAL: "15"

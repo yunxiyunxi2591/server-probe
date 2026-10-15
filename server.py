@@ -91,6 +91,7 @@ html[data-theme="dark"] .icon-moon{display:none}
   color:var(--sub);background:var(--glass);border:1px solid var(--glass-b);
   border-radius:999px;padding:3px 8px 3px 6px;font-weight:600;letter-spacing:.2px;white-space:nowrap}
 .os i{font-style:normal;font-size:12px;line-height:1}
+.os svg.osi{width:13px;height:13px;flex:none;display:block}
 .flags{font-size:17px;letter-spacing:2px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.08))}
 /* ---------- 两列信息区（左/右各一列，各自纵向排列） ---------- */
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;align-items:start}
@@ -165,16 +166,26 @@ document.addEventListener("keydown",function(e){
 });
 /* ---------- 渲染 ---------- */
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
-/* 系统图标 */
+/* 系统图标: 知名发行版用内联 SVG(彩色, 无需字体), 其余回退到 emoji */
 function osIcon(id){
-  const m={ubuntu:"🐧",debian:"🐧",centos:"🐧",almalinux:"🐧",rocky:"🐧",fedora:"🐧",
-    alpine:"🐧",arch:"🐧",opensuse:"🐧",fnos:"🐧",linux:"🐧",windows:"🪟",darwin:"🍎",macos:"🍎",freebsd:"😈"};
-  return m[String(id||"").toLowerCase()]||"🐧";
+  const k=String(id||"").toLowerCase();
+  if(k==="ubuntu")return '<svg class="osi" viewBox="0 0 24 24" aria-hidden="true">'+
+    '<circle cx="12" cy="12" r="7.4" fill="none" stroke="#E95420" stroke-width="2.6"/>'+
+    '<circle cx="12" cy="3.5" r="2.5" fill="#E95420"/>'+
+    '<circle cx="19.35" cy="16.25" r="2.5" fill="#E95420"/>'+
+    '<circle cx="4.65" cy="16.25" r="2.5" fill="#E95420"/></svg>';
+  if(k==="fnos")return '<svg class="osi" viewBox="0 0 24 24" aria-hidden="true">'+
+    '<rect x="1.6" y="1.6" width="20.8" height="20.8" rx="6" fill="#2FBE6E"/>'+
+    '<text x="12" y="16.9" font-size="12.5" font-weight="700" text-anchor="middle" '+
+    'fill="#fff" font-family="PingFang SC,Microsoft YaHei,sans-serif">飞</text></svg>';
+  const m={debian:"🐧",centos:"🐧",almalinux:"🐧",rocky:"🐧",fedora:"🐧",
+    alpine:"🐧",arch:"🐧",opensuse:"🐧",linux:"🐧",windows:"🪟",darwin:"🍎",macos:"🍎",freebsd:"😈"};
+  return '<i>'+(m[k]||"🐧")+'</i>';
 }
 function osChip(o){
   if(!o||!o.name)return "";
   const short=String(o.name).replace(/GNU\/Linux/gi,"").replace(/\s+/g," ").trim().split(" ").slice(0,2).join(" ");
-  return '<span class="os" title="'+esc(o.name+(o.arch?" · "+o.arch:""))+'"><i>'+osIcon(o.id)+'</i>'+esc(short)+'</span>';
+  return '<span class="os" title="'+esc(o.name+(o.arch?" · "+o.arch:""))+'"'+'>'+osIcon(o.id)+esc(short)+'</span>';
 }
 function fmtRate(b){if(b>=1048576)return (b/1048576).toFixed(1)+" MB/s";
   if(b>=1024)return (b/1024).toFixed(1)+" KB/s";return Math.round(b)+" B/s"}
@@ -184,6 +195,15 @@ function fmtUp(s){s=Math.floor(s);const d=Math.floor(s/86400),h=Math.floor(s%864
   if(d>0)return d+" 天 "+h+" 小时";const m=Math.floor(s%3600/60);
   return h>0?h+" 小时 "+m+" 分":m+" 分钟"}
 function latColor(ms){return ms<150?"var(--green)":ms<250?"var(--amber)":"var(--red)"}
+function daysUntil(d){
+  if(!d)return null;
+  const s=String(d);
+  const t=Date.parse(s.length<=10?s+"T00:00:00":s);
+  if(isNaN(t))return null;
+  const n=new Date();
+  const today=new Date(n.getFullYear(),n.getMonth(),n.getDate());
+  return Math.round((t-today)/86400000);
+}
 function lossColor(l){return l<=0?"var(--green)":l<5?"var(--amber)":"var(--pink)"}
 function barCls(p){return p>85?"fill b":p>65?"fill w":"fill"}
 function mRow(lb,pct,val,tip,title){
@@ -236,7 +256,15 @@ function card(n){
     '<span class="down">↓ '+fmtRate(n.rx_rate||0)+'</span>');
   const up=dlRow('在线','<span style="color:'+(online?"var(--ink)":"var(--faint)")+'">'+
     (online?fmtUp(n.uptime||0):"离线")+'</span>');
-  const price=dlRow('费用',n.price?esc(n.price):'<span style="color:var(--faint)">-</span>');
+  const price=dlRow('费用',
+    ((n.price&&n.price!=="-")?esc(n.price):'<span style="color:var(--faint)">-</span>')+
+    (()=>{
+      const d=daysUntil(n.expire);
+      if(d===null)return "";
+      const c=d<0?"var(--red)":d<=7?"var(--amber)":"var(--sub)";
+      const txt=d<0?"已过期 "+(-d)+" 天":d===0?"今天到期":"剩 "+d+" 天";
+      return '<span class="sep">·</span><span style="color:'+c+';font-weight:700">'+txt+'</span>';
+    })());
   const net3=dlRow('三网',chips,'wrap');
 
   const latCell='<div class="s"><div class="lr"><span class="lb">延迟</span>'+

@@ -22,5 +22,6 @@ services:
       PROBE_NAME: "fnOS NAS"
       PROBE_FLAG: "🇨🇳"
       PROBE_PRICE: "-"
+      PROBE_EXPIRE: ""          # 到期日 YYYY-MM-DD, 如 2026-11-15; 面板会显示"剩 N 天"
       PROBE_DISK: "all"          # all = 汇总所有挂载点(含各数据盘); 也可填 /host 只算根盘
       PROBE_INTERVAL: "15"

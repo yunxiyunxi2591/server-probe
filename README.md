@@ -90,10 +90,11 @@ python3 agent.py
 | `PROBE_SERVER` | `http://127.0.0.1:25777` | agent 上报地址 |
 | `PROBE_NAME` | 主机名 | 面板显示名 |
 | `PROBE_FLAG` | `🇺🇸` | 国旗 emoji |
-| `PROBE_PRICE` | `-` | 月租显示，如 `€7.4/月` |
+| `PROBE_PRICE` | `-` | 费用显示，如 `$14.99/YR` |
 | `PROBE_DISK` | `/` | 统计哪个挂载点；容器里填 `/host`；填 **`all`** 汇总所有挂载点（NAS 多盘推荐） |
 | `PROBE_INTERVAL` | `15` | 上报间隔秒数 |
 | `PROBE_CARRIERS` | 电信/联通/移动 | 每个运营商可配多个 IP（`|` 分隔，不通自动切换）：`电信:1.1.1.1|2.2.2.2,联通:3.3.3.3` |
+| `PROBE_EXPIRE` | 空 | 到期日 `YYYY-MM-DD`（如 `2026-11-15`），费用栏显示「剩 N 天」倒计时，≤7 天变黄、过期变红 |
 | `PROBE_PING_MODE` | `icmp` | 设 `tcp` 则用 TCP 握手近似延迟（无需 ping 命令） |
 
 ## Docker Hub 镜像
@@ -123,6 +124,13 @@ docker pull chensen2591/probe-agent:latest
 面板本身为只读无认证页面，建议：使用足够随机的 `PROBE_TOKEN`；不要把端口直接暴露在公网而毫无防护，可套 Nginx 反代加 Basic Auth，或只监听内网 + 反代。
 
 ## 更新日志
+
+### v1.1.5
+- **发行版专属图标**：Ubuntu 显示官方橙色「朋友圈」标志，fnOS 显示绿色「飞」标志（内联 SVG，替代通用 🐧）
+- **费用栏到期倒计时**：新增 `PROBE_EXPIRE=YYYY-MM-DD`，面板显示「剩 N 天」；≤7 天变黄，过期显示红色「已过期 N 天」
+
+### v1.1.4
+- 修复 `PROBE_DISK=all` 因 `statvfs_result` 无 `st_dev` 属性报 `AttributeError` 的问题
 
 ### v1.1.3
 - 修复容器里**飞牛仍显示 Debian**：容器里 `/etc/os-release` 是镜像自己的，改为读 `/host/etc/os-release` 并在 `/host` 下探测 fnOS 特征
