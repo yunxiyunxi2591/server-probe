@@ -5,7 +5,7 @@
 
 services:
   probe-server:
-    image: "${PROBE_OWNER:-IMAGE_OWNER}/probe-server:latest"
+    image: "${PROBE_OWNER:-chensen2591}/probe-server:latest"
     container_name: probe-server
     restart: unless-stopped
     ports:
@@ -16,7 +16,7 @@ services:
       PROBE_TITLE: "无趣的探针"
 
   probe-agent:
-    image: "${PROBE_OWNER:-IMAGE_OWNER}/probe-agent:latest"
+    image: "${PROBE_OWNER:-chensen2591}/probe-agent:latest"
     container_name: probe-agent
     restart: unless-stopped
     network_mode: host          # 必须：读宿主机真实网卡流量

@@ -45,7 +45,7 @@
 ### 方式一：Docker（推荐）
 
 ```bash
-git clone https://github.com/<你的用户名>/server-probe.git
+git clone https://github.com/yunxiyunxi2591/server-probe.git
 cd server-probe
 
 # 改 docker-compose.yml 里两处 PROBE_TOKEN 为同一个随机串
@@ -99,8 +99,8 @@ python3 agent.py
 推 tag 后由 GitHub Actions 自动构建并发布（amd64 + arm64）：
 
 ```bash
-docker pull <你的DockerHub用户名>/probe-server:latest
-docker pull <你的DockerHub用户名>/probe-agent:latest
+docker pull chensen2591/probe-server:latest
+docker pull chensen2591/probe-agent:latest
 ```
 
 需要在仓库 `Settings → Secrets and variables → Actions` 里配置：
