@@ -22,5 +22,5 @@ services:
       PROBE_NAME: "fnOS NAS"
       PROBE_FLAG: "🇨🇳"
       PROBE_PRICE: "-"
-      PROBE_DISK: "/host"
+      PROBE_DISK: "all"          # all = 汇总所有挂载点(含各数据盘); 也可填 /host 只算根盘
       PROBE_INTERVAL: "15"

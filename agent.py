@@ -26,7 +26,7 @@ NAME = _env("PROBE_NAME", socket.gethostname())          # 面板显示名
 FLAG = _env("PROBE_FLAG", "🇺🇸")                          # 国旗 emoji: 🇺🇸 / 🇨🇳
 LOCATION = _env("PROBE_LOCATION", "")                    # 位置描述(面板暂只显示国旗)
 PRICE = _env("PROBE_PRICE", "-")                         # 月租, 如 "€7.4/月"
-DISK_PATH = _env("PROBE_DISK", "/")                      # 挂载点; Docker 里用 /host
+DISK_PATH = _env("PROBE_DISK", "/")                      # 挂载点; Docker 里用 /host, 或 "all" 汇总所有挂载点
 INTERVAL = int(_env("PROBE_INTERVAL", 15))               # 上报间隔(秒)
 PING_MODE = _env("PROBE_PING_MODE", "icmp")              # icmp(默认, 自动降级) / tcp
 
@@ -96,11 +96,81 @@ def net_counters():
     return rx, tx
 
 
+REAL_FS = {"ext2", "ext3", "ext4", "xfs", "btrfs", "f2fs", "zfs", "jfs", "reiserfs",
+           "vfat", "exfat", "ntfs", "ntfs3", "fuseblk", "hfsplus", "apfs", "udf", "bcachefs"}
+
+
 def disk_usage(path):
     st = os.statvfs(path)
     total = st.f_blocks * st.f_frsize
     free = st.f_bavail * st.f_frsize
-    return total - free, total
+    return total - free, total, 1
+
+
+def disk_usage_all():
+    """汇总所有真实挂载点的容量（同一设备只计一次），返回 (used, total, mounts)
+
+    PROBE_DISK="all" 时使用。容器里若挂了 -v /:/host:ro，会自动读宿主机的挂载表，
+    因此统计到的是 NAS 上全部数据盘，而不是容器自己的叠加层。
+    """
+    prefix, mf = "", "/proc/mounts"
+    if os.path.exists("/host/proc/mounts"):
+        prefix, mf = "/host", "/host/proc/mounts"
+    used = total = mounts = 0
+    seen = set()
+    try:
+        with open(mf) as f:
+            lines = f.readlines()
+    except Exception:
+        return disk_usage("/")
+    for line in lines:
+        p = line.split()
+        if len(p) < 3:
+            continue
+        dev, mnt, fst = p[0], p[1], p[2]
+        if fst not in REAL_FS or dev.startswith("/dev/loop"):
+            continue
+        key = dev if dev.startswith("/dev/") else "%s:%s" % (fst, mnt)
+        if key in seen:
+            continue
+        seen.add(key)
+        try:
+            st = os.statvfs(prefix + mnt)
+        except Exception:
+            continue
+        t = st.f_blocks * st.f_frsize
+        if t <= 0:
+            continue
+        used += t - st.f_bavail * st.f_frsize
+        total += t
+        mounts += 1
+    if total <= 0:                      # 没扫到，兜底用根分区
+        return disk_usage("/")
+    return used, total, mounts
+
+
+def cpu_info():
+    """CPU 型号 + 逻辑核心数"""
+    model = ""
+    try:
+        with open("/proc/cpuinfo") as f:
+            txt = f.read()
+        m = (re.search(r"^model name\s*:\s*(.+)$", txt, re.M)
+             or re.search(r"^(?:Hardware|Model|cpu model)\s*:\s*(.+)$", txt, re.M))
+        if m:
+            model = m.group(1).strip()
+    except Exception:
+        pass
+    if not model:
+        try:
+            model = platform.processor() or ""
+        except Exception:
+            model = ""
+    try:
+        cores = os.cpu_count() or 0
+    except Exception:
+        cores = 0
+    return model[:80], cores
 
 
 def tcp_ping(name, ip, port=80, count=4, timeout=2.0):
@@ -240,14 +310,20 @@ def main():
             now = time.time()
             dt = max(now - prev_t, 0.1)
             mem_used, mem_total = mem_info()
-            disk_used, disk_total = disk_usage(DISK_PATH)
+            if DISK_PATH == "all":
+                disk_used, disk_total, disk_mounts = disk_usage_all()
+            else:
+                disk_used, disk_total, disk_mounts = disk_usage(DISK_PATH)
             with open("/proc/uptime") as f:
                 uptime = float(f.read().split()[0])
+            model, cores = cpu_info()
             payload = {
                 "name": NAME, "flag": FLAG, "location": LOCATION, "price": PRICE,
                 "cpu": round(cpu, 1), "load": load_avg(),
+                "cpu_model": model, "cpu_cores": cores,
                 "mem_used": mem_used, "mem_total": mem_total,
                 "disk_used": disk_used, "disk_total": disk_total,
+                "disk_mounts": disk_mounts,
                 "rx_rate": max(0, (rx - prev_rx) / dt),
                 "tx_rate": max(0, (tx - prev_tx) / dt),
                 "rx_total": rx, "tx_total": tx,

@@ -52,7 +52,7 @@ html{-webkit-text-size-adjust:100%}
 body{min-height:100vh;
   background:linear-gradient(168deg,var(--bg1) 0%,var(--bg2) 46%,var(--bg3) 100%);
   font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI","Microsoft YaHei",sans-serif;
-  color:var(--ink);padding:12px 10px 38px;transition:background .35s,color .35s}
+  color:var(--ink);padding:10px 9px 26px;transition:background .35s,color .35s}
 .wrap{max-width:780px;margin:0 auto}
 /* ---------- 顶栏 ---------- */
 .top{display:flex;align-items:center;gap:8px;padding:0 4px 10px}
@@ -76,10 +76,10 @@ html[data-theme="dark"] .icon-moon{display:none}
   box-shadow:0 0 0 0 rgba(34,197,94,.45);animation:pulse 2.2s infinite}
 @keyframes pulse{70%{box-shadow:0 0 0 7px rgba(34,197,94,0)}}
 /* ---------- 卡片 ---------- */
-.card{background:var(--card);border-radius:18px;padding:13px 15px 11px;margin-bottom:11px;
+.card{background:var(--card);border-radius:16px;padding:11px 14px 10px;margin-bottom:9px;
   box-shadow:var(--shadow);border:1px solid var(--card-b);transition:background .35s,box-shadow .35s}
 .card.off{opacity:.55;filter:grayscale(.85)}
-.head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 .dot{width:10px;height:10px;border-radius:50%;flex:none;background:var(--green);
   box-shadow:0 0 0 3px rgba(34,197,94,.15)}
 .off .dot{background:#9ca3af;box-shadow:none}
@@ -92,39 +92,41 @@ html[data-theme="dark"] .icon-moon{display:none}
   border-radius:999px;padding:3px 8px 3px 6px;font-weight:600;letter-spacing:.2px;white-space:nowrap}
 .os i{font-style:normal;font-size:12px;line-height:1}
 .flags{font-size:17px;letter-spacing:2px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.08))}
-/* ---------- 指标格 ---------- */
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px 22px}
-@media(max-width:440px){.grid{grid-template-columns:1fr}}
-.m .lr{display:flex;justify-content:space-between;align-items:baseline;font-size:13.5px}
+/* ---------- 两列信息区（左/右各一列，各自纵向排列） ---------- */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;align-items:start}
+.col{display:flex;flex-direction:column;gap:7px;min-width:0}
+@media(max-width:460px){.grid2{grid-template-columns:1fr;gap:14px}}
+.m .lr{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;gap:8px}
 .m .lb{color:var(--sub);font-weight:600}
 .m .v{font-weight:700;font-variant-numeric:tabular-nums}
-.bar{height:5px;border-radius:3px;background:var(--track);margin:5px 0 3.5px;overflow:hidden}
+.bar{height:4px;border-radius:2px;background:var(--track);margin:4px 0 3px;overflow:hidden}
 .fill{height:100%;border-radius:3px;width:0;
   background:linear-gradient(90deg,#34d399,#a3e635);
   transition:width .8s cubic-bezier(.22,1,.36,1)}
 .fill.w{background:linear-gradient(90deg,#fcd34d,#f59e0b)}
 .fill.b{background:linear-gradient(90deg,#f87171,#ef4444)}
-.tip{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums;letter-spacing:.2px}
+.tip{font-size:10.5px;color:var(--faint);font-variant-numeric:tabular-nums;letter-spacing:.2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* ---------- 点线引导行 ---------- */
-.dl{display:flex;align-items:baseline;font-size:13.5px;margin-top:7.5px}
+.dl{display:flex;align-items:baseline;font-size:13px}
 .dl .lb{color:var(--sub);font-weight:600;flex:none}
-.dl .lead{flex:1;border-bottom:1.5px dotted #d3d9d3;margin:0 10px;transform:translateY(-3px)}
-.dl .val{font-weight:700;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.dl .lead{flex:1;border-bottom:1.5px dotted #d3d9d3;margin:0 8px;transform:translateY(-3px);min-width:5px}
+.dl .val{font-weight:700;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.dl.wrap .val{white-space:normal;line-height:1.4;text-align:right;overflow:visible}
 .up{color:var(--green)}.down{color:var(--blue)}
 .sep{color:var(--sep);font-weight:400;margin:0 5px}
 /* ---------- 延迟 / 丢包 ---------- */
-.sum{display:grid;grid-template-columns:1fr 1fr;gap:9px 22px;margin-top:9px}
-@media(max-width:440px){.sum{grid-template-columns:1fr}}
-.s .lr{display:flex;justify-content:space-between;align-items:baseline;font-size:13.5px}
+.s .lr{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;gap:8px}
 .s .lr .v{font-weight:700;font-variant-numeric:tabular-nums}
-.seg-bar{display:flex;gap:3px;margin-top:5.5px}
-.seg-bar i{flex:1;height:4px;border-radius:2px;background:var(--track);transition:background .5s}
+.seg-bar{display:flex;gap:2px;margin-top:4px}
+.seg-bar i{flex:1;height:3.5px;border-radius:2px;background:var(--track);transition:background .5s}
 .seg-bar i.g{background:var(--green)}
 .seg-bar i.a{background:var(--amber)}
 .seg-bar i.r{background:var(--red)}
 .seg-bar i.p{background:var(--pink)}
 /* ---------- 页脚 ---------- */
-.foot{text-align:center;color:#8ba392;font-size:11.5px;margin-top:14px;letter-spacing:.4px}
+.foot{text-align:center;color:#8ba392;font-size:11.5px;margin-top:12px;letter-spacing:.4px}
 </style>
 </head>
 <body>
@@ -184,15 +186,15 @@ function fmtUp(s){s=Math.floor(s);const d=Math.floor(s/86400),h=Math.floor(s%864
 function latColor(ms){return ms<150?"var(--green)":ms<250?"var(--amber)":"var(--red)"}
 function lossColor(l){return l<=0?"var(--green)":l<5?"var(--amber)":"var(--pink)"}
 function barCls(p){return p>85?"fill b":p>65?"fill w":"fill"}
-function mRow(lb,pct,val,tip){
+function mRow(lb,pct,val,tip,title){
   const w=Math.max(pct,2.5).toFixed(1);
   return '<div class="m"><div class="lr"><span class="lb">'+lb+'</span><span class="v">'+val+
     '</span></div><div class="bar"><div class="'+barCls(pct)+'" style="width:'+w+
-    '%"></div></div><div class="tip">'+tip+'</div></div>';
+    '%"></div></div><div class="tip"'+(title?' title="'+esc(title)+'"':'')+'>'+tip+'</div></div>';
 }
-function dlRow(lb,val){
-  return '<div class="dl"><span class="lb">'+lb+'</span><span class="lead"></span><span class="val">'+
-    val+'</span></div>';
+function dlRow(lb,val,cls){
+  return '<div class="dl'+(cls?' '+cls:'')+'"><span class="lb">'+lb+'</span><span class="lead"></span>'+
+    '<span class="val">'+val+'</span></div>';
 }
 function segBar(n,fn){
   let h='<div class="seg-bar">';
@@ -201,6 +203,13 @@ function segBar(n,fn){
 }
 function card(n){
   const cpu=n.cpu||0;
+  // CPU 型号 / 核心数 / 负载
+  const cores=n.cpu_cores||0;
+  const model=String(n.cpu_model||"").replace(/\(R\)|\(TM\)|CPU\s*/gi," ")
+    .replace(/\s+/g," ").trim();
+  const load=(n.load||[]).map(x=>Number(x).toFixed(2)).join("/");
+  const cpuTip=[model+(cores?" · "+cores+" 核":""), load?"负载 "+load:""]
+    .filter(Boolean).join(" · ")||"-";
   const memPct=n.mem_total?n.mem_used/n.mem_total*100:0;
   const diskPct=n.disk_total?n.disk_used/n.disk_total*100:0;
   const nets=n.net||[];
@@ -230,27 +239,35 @@ function card(n){
   const up=dlRow('在线','<span style="color:'+(online?"var(--ink)":"var(--faint)")+'">'+
     (online?fmtUp(n.uptime||0):"离线")+'</span>');
   const price=dlRow('费用',n.price?esc(n.price):'<span style="color:var(--faint)">-</span>');
-  const net3=dlRow('三网',chips);
+  const net3=dlRow('三网',chips,'wrap');
+
+  const latCell='<div class="s"><div class="lr"><span class="lb">延迟</span>'+
+    '<span class="v" style="color:'+(online&&avgL?latColor(avgL):"var(--faint)")+'">'+
+    (online&&avgL?Math.round(avgL)+" ms":"-")+'</span></div>'+segBar(12,latCls)+'</div>';
+  const lossCell='<div class="s"><div class="lr"><span class="lb">丢包</span>'+
+    '<span class="v" style="color:'+(online?lossColor(avgP):"var(--faint)")+'">'+
+    (online?avgP.toFixed(1)+"%":"-")+'</span></div>'+segBar(12,lossCls)+'</div>';
+
+  // 左列: CPU / 硬盘 / 速率 / 费用 / 延迟    右列: 内存 / 流量 / 在线 / 三网 / 丢包
+  const colL=[
+    mRow('CPU',cpu,cpu.toFixed(1)+'%',esc(cpuTip),cpuTip),
+    mRow('硬盘',diskPct,diskPct.toFixed(1)+'%',fmtSize(n.disk_used||0)+' / '+fmtSize(n.disk_total||0)+
+      (n.disk_mounts>1?' · '+n.disk_mounts+' 盘合计':''),
+      "硬盘"+(n.disk_mounts>1?"（"+n.disk_mounts+" 个挂载点合计）":"")),
+    rate,price,latCell,
+  ];
+  const colR=[
+    mRow('内存',memPct,memPct.toFixed(1)+'%',fmtSize(n.mem_used||0)+' / '+fmtSize(n.mem_total||0)),
+    mRow('流量',2.5,'0.0%','↑ '+fmtSize(n.tx_total||0)+' · ↓ '+fmtSize(n.rx_total||0)+' / ∞'),
+    up,net3,lossCell,
+  ];
 
   return '<div class="card'+(online?'':' off')+'">'+
     '<div class="head"><span class="dot"></span><span class="name">'+esc(n.name)+'</span>'+
     (online?'':'<span class="offline-badge">离线</span>')+
     '<span class="hd-r"><span class="flags">'+esc(n.flag||"")+'</span>'+osChip(n.os)+'</span></div>'+
-    '<div class="grid">'+
-      mRow('CPU',cpu,cpu.toFixed(1)+'%',(n.load||[]).join(', '))+
-      mRow('内存',memPct,memPct.toFixed(1)+'%',fmtSize(n.mem_used||0)+' / '+fmtSize(n.mem_total||0))+
-      mRow('硬盘',diskPct,diskPct.toFixed(1)+'%',fmtSize(n.disk_used||0)+' / '+fmtSize(n.disk_total||0))+
-      mRow('流量',2.5,'0.0%','↑ '+fmtSize(n.tx_total||0)+' · ↓ '+fmtSize(n.rx_total||0)+' / ∞')+
-    '</div>'+
-    rate+up+price+net3+
-    '<div class="sum">'+
-      '<div class="s"><div class="lr"><span class="lb">延迟</span>'+
-        '<span class="v" style="color:'+(online&&avgL?latColor(avgL):"var(--faint)")+'">'+
-        (online&&avgL?Math.round(avgL)+" ms":"-")+'</span></div>'+segBar(12,latCls)+'</div>'+
-      '<div class="s"><div class="lr"><span class="lb">丢包</span>'+
-        '<span class="v" style="color:'+(online?lossColor(avgP):"var(--faint)")+'">'+
-        (online?avgP.toFixed(1)+"%":"-")+'</span></div>'+segBar(12,lossCls)+'</div>'+
-    '</div></div>';
+    '<div class="grid2"><div class="col">'+colL.join('')+'</div>'+
+    '<div class="col">'+colR.join('')+'</div></div></div>';
 }
 async function refresh(){
   try{
