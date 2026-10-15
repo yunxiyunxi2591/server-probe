@@ -30,13 +30,14 @@ DISK_PATH = _env("PROBE_DISK", "/")                      # 挂载点; Docker 里
 INTERVAL = int(_env("PROBE_INTERVAL", 15))               # 上报间隔(秒)
 PING_MODE = _env("PROBE_PING_MODE", "icmp")              # icmp(默认, 自动降级) / tcp
 
-# 三网 ping 目标: 每个运营商可配多个 IP, 第一个 100% 丢包时自动换下一个
+# 三网 ping 目标: 每个运营商可配多个候选 IP, agent 并行测完自动选丢包最低的那个
 # 也可用环境变量 PROBE_CARRIERS="电信:1.2.3.4|5.6.7.8,联通:3.3.3.3" 覆盖
-# 注: 以下 IP 均实测能回 ICMP (2026-10); 北京联通 202.106.0.20 等老基准已不回包, 仅作备用
+# 注: 2026-10 实测——老基准(北京联通 202.106.0.20 / 广东移动 120.196.165.244)已不回 ICMP;
+#     移动各基准 IP 从电信线路测普遍有 20%~50% 丢包(跨网真实丢包, 非 bug)
 _DEFAULT_CARRIERS = [
-    ("电信", ["202.96.209.133", "61.139.2.69"]),     # 上海电信 / 四川电信
-    ("联通", ["221.228.255.1", "202.106.0.20"]),     # 江苏联通 / 北京联通
-    ("移动", ["211.136.192.6", "120.196.165.244"]),  # 北京移动 / 广东移动
+    ("电信", ["202.96.209.133", "61.139.2.69"]),              # 上海电信 / 四川电信
+    ("联通", ["221.228.255.1", "202.106.0.20"]),              # 江苏联通 / 北京联通
+    ("移动", ["112.4.0.55", "211.138.180.2", "211.136.192.6"]),  # 江苏移动 / 浙江移动 / 北京移动
 ]
 CARRIERS = []
 for _part in _env("PROBE_CARRIERS", "").split(","):
@@ -140,13 +141,20 @@ def ping_one(name, ip):
 
 
 def ping_carrier(name, ips):
-    """逐个尝试该运营商的候选 IP, 第一个能通的即返回"""
-    last = {"name": name, "avg": 0.0, "loss": 100.0}
+    """并行测试该运营商所有候选 IP, 返回丢包最低(相同则延迟最低)的结果"""
+    results, ths = {}, []
     for ip in ips:
-        last = ping_one(name, ip)
-        if last["loss"] < 100:
-            return last
-    return last
+        t = threading.Thread(
+            target=lambda i=ip: results.__setitem__(i, ping_one(name, i)),
+            daemon=True)
+        t.start()
+        ths.append(t)
+    for t in ths:
+        t.join()
+    if not results:
+        return {"name": name, "avg": 0.0, "loss": 100.0}
+    best = min(results.values(), key=lambda r: (r["loss"], r["avg"]))
+    return best
 
 
 def ping_all():
@@ -163,23 +171,48 @@ def ping_all():
     return [results[n] for n, _ in CARRIERS if n in results]
 
 
-def os_info():
-    """采集系统标识: 发行版 id / 完整名称 / 版本 / 架构 (用于面板显示系统图标)"""
+def _read_kv_file(path):
     d = {}
     try:
-        with open("/etc/os-release") as f:
+        with open(path) as f:
             for line in f:
                 if "=" in line:
                     k, v = line.strip().split("=", 1)
                     d[k] = v.strip().strip('"')
     except Exception:
         pass
-    oid = (d.get("ID") or ("windows" if os.name == "nt" else "linux")).lower()
-    pretty = d.get("PRETTY_NAME") or d.get("NAME") or oid
+    return d
+
+
+def os_info():
+    """采集系统标识: 发行版 id / 完整名称 / 版本 / 架构 (用于面板显示系统图标)
+
+    fnOS(飞牛)的 /etc/os-release 就是 Debian 原样, 这里优先探测 fnOS 特征:
+    /usr/trim 目录(fnOS 核心组件) 或 /etc/fnos-release
+    """
+    d = _read_kv_file("/etc/os-release")
+    arch = ""
     try:
         arch = platform.machine()
     except Exception:
-        arch = ""
+        pass
+    # --- fnOS 识别 ---
+    if os.path.isdir("/usr/trim") or os.path.exists("/etc/fnos-release"):
+        ver = ""
+        for vf in ("/etc/fnos-release", "/usr/trim/etc/version"):
+            try:
+                with open(vf) as f:
+                    ver = f.read().strip().strip('"')
+                if ver:
+                    break
+            except Exception:
+                pass
+        if not ver:
+            ver = d.get("VERSION_ID", "")
+        name = "fnOS " + ver if ver else "fnOS"
+        return {"id": "fnos", "name": name, "ver": ver, "arch": arch}
+    oid = (d.get("ID") or ("windows" if os.name == "nt" else "linux")).lower()
+    pretty = d.get("PRETTY_NAME") or d.get("NAME") or oid
     return {"id": oid, "name": pretty, "ver": d.get("VERSION_ID", ""), "arch": arch}
 
 
