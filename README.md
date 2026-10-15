@@ -124,6 +124,11 @@ docker pull chensen2591/probe-agent:latest
 
 ## 更新日志
 
+### v1.1.3
+- 修复容器里**飞牛仍显示 Debian**：容器里 `/etc/os-release` 是镜像自己的，改为读 `/host/etc/os-release` 并在 `/host` 下探测 fnOS 特征
+- 修复 `PROBE_DISK=all` **漏掉数据盘**：容器内挂载表不可靠，改为扫描 `/host` 顶层目录并按文件系统（`st_dev`）去重汇总，任何真实挂载的数据盘都能统计到
+- 面板 CPU 行去掉负载数字，只保留 `型号 · N 核`
+
 ### v1.1.2
 - **CPU 显示型号与核心数**：面板 CPU 那格下面显示 `Intel N100 · 4 核 · 负载 0.x/0.x/0.x`（旧版仅显示负载数字）
 - **硬盘支持汇总所有挂载点**：`PROBE_DISK=all` 时统计全部真实挂载点（自动跳过 tmpfs/proc/docker 叠加层，同一设备只计一次），NAS 多数据盘场景不再只显示根分区

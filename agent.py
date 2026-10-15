@@ -108,44 +108,56 @@ def disk_usage(path):
 
 
 def disk_usage_all():
-    """汇总所有真实挂载点的容量（同一设备只计一次），返回 (used, total, mounts)
+    """汇总所有真实挂载点的容量（按文件系统去重），返回 (used, total, mounts)
 
-    PROBE_DISK="all" 时使用。容器里若挂了 -v /:/host:ro，会自动读宿主机的挂载表，
-    因此统计到的是 NAS 上全部数据盘，而不是容器自己的叠加层。
+    容器里（-v /:/host:ro）：/proc/mounts 是容器自己的挂载表，不可靠；
+    改为扫描 /host 顶层目录并按 st_dev 去重 —— 任何真实挂载到宿主机的
+    数据盘（如 fnOS 的 /vol1）都会体现为不同的 st_dev，因此都能统计到。
+    裸机：解析 /proc/mounts 的真实文件系统后同样按 st_dev 去重。
     """
-    prefix, mf = "", "/proc/mounts"
-    if os.path.exists("/host/proc/mounts"):
-        prefix, mf = "/host", "/host/proc/mounts"
-    used = total = mounts = 0
-    seen = set()
-    try:
-        with open(mf) as f:
-            lines = f.readlines()
-    except Exception:
-        return disk_usage("/")
-    for line in lines:
-        p = line.split()
-        if len(p) < 3:
-            continue
-        dev, mnt, fst = p[0], p[1], p[2]
-        if fst not in REAL_FS or dev.startswith("/dev/loop"):
-            continue
-        key = dev if dev.startswith("/dev/") else "%s:%s" % (fst, mnt)
-        if key in seen:
-            continue
-        seen.add(key)
+    prefix = _host_prefix()
+    cands = []
+    if prefix:                                   # 容器模式: 扫描 /host 顶层目录
+        cands.append(prefix)                     # 宿主机根文件系统
         try:
-            st = os.statvfs(prefix + mnt)
+            for name in sorted(os.listdir(prefix)):
+                p = os.path.join(prefix, name)
+                if os.path.isdir(p) and not os.path.islink(p):
+                    cands.append(p)
+        except Exception:
+            pass
+    else:                                        # 裸机模式: 用挂载表
+        try:
+            with open("/proc/mounts") as f:
+                for line in f:
+                    p = line.split()
+                    if len(p) < 3:
+                        continue
+                    dev, mnt, fst = p[0], p[1], p[2]
+                    if fst not in REAL_FS or dev.startswith("/dev/loop"):
+                        continue
+                    cands.append(mnt)
+        except Exception:
+            pass
+    used = total = mounts = 0
+    seen_dev = set()
+    for path in cands:
+        try:
+            st = os.statvfs(path)
         except Exception:
             continue
         t = st.f_blocks * st.f_frsize
         if t <= 0:
             continue
+        dev = st.st_dev
+        if dev in seen_dev:                      # 同一文件系统只计一次
+            continue
+        seen_dev.add(dev)
         used += t - st.f_bavail * st.f_frsize
         total += t
         mounts += 1
-    if total <= 0:                      # 没扫到，兜底用根分区
-        return disk_usage("/")
+    if total <= 0:                               # 兑底
+        return disk_usage("/" if DISK_PATH == "all" else DISK_PATH)
     return used, total, mounts
 
 
@@ -241,6 +253,11 @@ def ping_all():
     return [results[n] for n, _ in CARRIERS if n in results]
 
 
+def _host_prefix():
+    """容器里 -v /:/host:ro 时宿主机根在 /host 下; 裸机跑则无前缀"""
+    return "/host" if os.path.isdir("/host/etc") else ""
+
+
 def _read_kv_file(path):
     d = {}
     try:
@@ -255,21 +272,23 @@ def _read_kv_file(path):
 
 
 def os_info():
-    """采集系统标识: 发行版 id / 完整名称 / 版本 / 架构 (用于面板显示系统图标)
+    """采集宿主机系统标识 (用于面板显示系统图标)
 
-    fnOS(飞牛)的 /etc/os-release 就是 Debian 原样, 这里优先探测 fnOS 特征:
-    /usr/trim 目录(fnOS 核心组件) 或 /etc/fnos-release
+    注意: 容器里 /etc/os-release 是镜像自己的(Debian), 必须读 /host/etc/os-release;
+    fnOS(飞牛)的 os-release 就是 Debian 原样, 需探测 /usr/trim 等特征。
     """
-    d = _read_kv_file("/etc/os-release")
+    prefix = _host_prefix()
+    d = _read_kv_file(prefix + "/etc/os-release") or _read_kv_file("/etc/os-release")
     arch = ""
     try:
         arch = platform.machine()
     except Exception:
         pass
-    # --- fnOS 识别 ---
-    if os.path.isdir("/usr/trim") or os.path.exists("/etc/fnos-release"):
+    # --- fnOS 识别(容器里特征目录也在 /host 下) ---
+    if (os.path.isdir(prefix + "/usr/trim") or os.path.exists(prefix + "/etc/fnos-release")
+            or os.path.isdir("/usr/trim") or os.path.exists("/etc/fnos-release")):
         ver = ""
-        for vf in ("/etc/fnos-release", "/usr/trim/etc/version"):
+        for vf in (prefix + "/etc/fnos-release", prefix + "/usr/trim/etc/version"):
             try:
                 with open(vf) as f:
                     ver = f.read().strip().strip('"')

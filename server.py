@@ -203,13 +203,11 @@ function segBar(n,fn){
 }
 function card(n){
   const cpu=n.cpu||0;
-  // CPU 型号 / 核心数 / 负载
+  // CPU 型号 / 核心数
   const cores=n.cpu_cores||0;
   const model=String(n.cpu_model||"").replace(/\(R\)|\(TM\)|CPU\s*/gi," ")
     .replace(/\s+/g," ").trim();
-  const load=(n.load||[]).map(x=>Number(x).toFixed(2)).join("/");
-  const cpuTip=[model+(cores?" · "+cores+" 核":""), load?"负载 "+load:""]
-    .filter(Boolean).join(" · ")||"-";
+  const cpuTip=[model+(cores?" · "+cores+" 核":"")].filter(Boolean).join(" · ")||"-";
   const memPct=n.mem_total?n.mem_used/n.mem_total*100:0;
   const diskPct=n.disk_total?n.disk_used/n.disk_total*100:0;
   const nets=n.net||[];
