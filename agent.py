@@ -144,12 +144,12 @@ def disk_usage_all():
     for path in cands:
         try:
             st = os.statvfs(path)
+            dev = os.stat(path).st_dev     # statvfs_result 没有 st_dev, 设备号要从 stat() 取
         except Exception:
             continue
         t = st.f_blocks * st.f_frsize
         if t <= 0:
             continue
-        dev = st.st_dev
         if dev in seen_dev:                      # 同一文件系统只计一次
             continue
         seen_dev.add(dev)
