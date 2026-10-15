@@ -1,5 +1,9 @@
 # 无趣的探针 · Server Probe
 
+[![Build and Push Docker Images](https://github.com/yunxiyunxi2591/server-probe/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/yunxiyunxi2591/server-probe/actions/workflows/docker-publish.yml)
+![License](https://img.shields.io/badge/license-MIT-green">
+![Python](https://img.shields.io/badge/python-3.8%2B-blue)
+
 一个**零依赖**的轻量服务器监控探针：一台机器跑服务端出面板，其它机器跑采集端定时上报。只用 Python 3 标准库，没有 pip 依赖，没有数据库，重启即用。
 
 - **服务端** `server.py`：接收上报 + 内置网页面板（单文件内嵌 HTML/CSS/JS）
