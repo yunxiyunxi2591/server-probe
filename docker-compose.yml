@@ -43,7 +43,7 @@ services:
     environment:
       PROBE_SERVER: "http://127.0.0.1:25777"   # NAS 上改成 http://VPS公网IP:25777
       PROBE_TOKEN: "change-me-2026"            # ← 与服务端一致
-      PROBE_NAME: "Netcup VPS"                 # ← 面板显示名
+      PROBE_NAME: "VPS"                 # ← 面板显示名
       PROBE_FLAG: "🇺🇸"                         # NAS 用 🇨🇳
       PROBE_PRICE: "€7.4/月"                    # NAS 可写 "-"
       PROBE_DISK: "/host"                      # 配合上面的只读挂载

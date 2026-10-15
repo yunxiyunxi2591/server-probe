@@ -26,7 +26,7 @@ services:
     environment:
       PROBE_SERVER: "http://127.0.0.1:25777"   # NAS 上改成 http://VPS公网IP:25777
       PROBE_TOKEN: "change-me-2026"            # ← 与服务端一致
-      PROBE_NAME: "Netcup VPS"
+      PROBE_NAME: "VPS"
       PROBE_FLAG: "🇺🇸"
       PROBE_PRICE: "€7.4/月"
       PROBE_DISK: "/host"

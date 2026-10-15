@@ -102,7 +102,7 @@ docker run -d --name probe-agent --restart unless-stopped \
 | `PROBE_PRICE` | `-` | 月租显示，如 `€7.4/月` |
 | `PROBE_DISK` | `/` | 统计哪个挂载点，容器里填 `/host` |
 | `PROBE_INTERVAL` | `15` | 上报间隔秒数 |
-| `PROBE_CARRIERS` | 电信/联通/移动 | 自定义：`电信:1.1.1.1,联通:2.2.2.2` |
+| `PROBE_CARRIERS` | 电信/联通/移动 | 每个运营商可配多个 IP（`|` 分隔，不通自动切换）：`电信:1.1.1.1|2.2.2.2,联通:3.3.3.3` |
 | `PROBE_PING_MODE` | `icmp` | 设 `tcp` 则用 TCP 握手近似延迟（无需 ping 命令） |
 
 ## 为什么 agent 一定要用 host 网络

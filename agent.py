@@ -7,6 +7,7 @@
 """
 import json
 import os
+import platform
 import re
 import socket
 import subprocess
@@ -29,14 +30,23 @@ DISK_PATH = _env("PROBE_DISK", "/")                      # 挂载点; Docker 里
 INTERVAL = int(_env("PROBE_INTERVAL", 15))               # 上报间隔(秒)
 PING_MODE = _env("PROBE_PING_MODE", "icmp")              # icmp(默认, 自动降级) / tcp
 
-# 三网 ping 目标, 可用 PROBE_CARRIERS="电信:1.2.3.4,联通:5.6.7.8" 覆盖
+# 三网 ping 目标: 每个运营商可配多个 IP, 第一个 100% 丢包时自动换下一个
+# 也可用环境变量 PROBE_CARRIERS="电信:1.2.3.4|5.6.7.8,联通:3.3.3.3" 覆盖
+# 注: 以下 IP 均实测能回 ICMP (2026-10); 北京联通 202.106.0.20 等老基准已不回包, 仅作备用
 _DEFAULT_CARRIERS = [
-    ("电信", "202.96.209.133"),      # 上海电信
-    ("联通", "202.106.0.20"),        # 北京联通
-    ("移动", "120.196.165.244"),     # 广东移动
+    ("电信", ["202.96.209.133", "61.139.2.69"]),     # 上海电信 / 四川电信
+    ("联通", ["221.228.255.1", "202.106.0.20"]),     # 江苏联通 / 北京联通
+    ("移动", ["211.136.192.6", "120.196.165.244"]),  # 北京移动 / 广东移动
 ]
-CARRIERS = [tuple(x.split(":", 1)) for x in _env(
-    "PROBE_CARRIERS", "").split(",") if ":" in x] or _DEFAULT_CARRIERS
+CARRIERS = []
+for _part in _env("PROBE_CARRIERS", "").split(","):
+    if ":" in _part:
+        _n, _ips = _part.split(":", 1)
+        _lst = [x for x in _ips.split("|") if x]
+        if _n and _lst:
+            CARRIERS.append((_n, _lst))
+if not CARRIERS:
+    CARRIERS = _DEFAULT_CARRIERS
 # =========================================================================
 
 
@@ -129,17 +139,48 @@ def ping_one(name, ip):
         return {"name": name, "avg": 0.0, "loss": 100.0}
 
 
+def ping_carrier(name, ips):
+    """逐个尝试该运营商的候选 IP, 第一个能通的即返回"""
+    last = {"name": name, "avg": 0.0, "loss": 100.0}
+    for ip in ips:
+        last = ping_one(name, ip)
+        if last["loss"] < 100:
+            return last
+    return last
+
+
 def ping_all():
     """三网并行 ping"""
     results, ths = {}, []
-    for name, ip in CARRIERS:
-        t = threading.Thread(target=lambda n=name, i=ip: results.__setitem__(
-            n, ping_one(n, i)), daemon=True)
+    for name, ips in CARRIERS:
+        t = threading.Thread(
+            target=lambda n=name, i=ips: results.__setitem__(n, ping_carrier(n, i)),
+            daemon=True)
         t.start()
         ths.append(t)
     for t in ths:
         t.join()
     return [results[n] for n, _ in CARRIERS if n in results]
+
+
+def os_info():
+    """采集系统标识: 发行版 id / 完整名称 / 版本 / 架构 (用于面板显示系统图标)"""
+    d = {}
+    try:
+        with open("/etc/os-release") as f:
+            for line in f:
+                if "=" in line:
+                    k, v = line.strip().split("=", 1)
+                    d[k] = v.strip().strip('"')
+    except Exception:
+        pass
+    oid = (d.get("ID") or ("windows" if os.name == "nt" else "linux")).lower()
+    pretty = d.get("PRETTY_NAME") or d.get("NAME") or oid
+    try:
+        arch = platform.machine()
+    except Exception:
+        arch = ""
+    return {"id": oid, "name": pretty, "ver": d.get("VERSION_ID", ""), "arch": arch}
 
 
 def report(payload):
@@ -177,7 +218,7 @@ def main():
                 "rx_rate": max(0, (rx - prev_rx) / dt),
                 "tx_rate": max(0, (tx - prev_tx) / dt),
                 "rx_total": rx, "tx_total": tx,
-                "uptime": uptime, "net": ping_all(),
+                "uptime": uptime, "net": ping_all(), "os": os_info(),
             }
             prev_rx, prev_tx, prev_t = rx, tx, now
             report(payload)
